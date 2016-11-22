@@ -1,11 +1,6 @@
-(ns clj-gensim.corpora.dictionary)
+(ns clj-gensim.corpora.dictionary
+  (:require [clj-gensim.corpora.dictionary-protocol :refer :all]))
 ;; (remove-ns 'clj-gensim.corpora.dictionary)
-
-(defprotocol DictionaryProtocol
-  (index [this token])
-  (doc2bow [this document])
-  (add-document [this document])
-  (add-documents [this documents] [this documents prune-at]))
 
 (defrecord Dictionary [token2id dfs num-docs num-pos num-nnz]
   DictionaryProtocol
@@ -37,48 +32,13 @@
             this
             (map vector (range) documents))))
 
-(defn- token-hash [max-hash f]
-  (let [r (rem (.hashCode f) max-hash)]
-    (if (< r 0)
-      (+ r max-hash)
-      r)))
-
-(defrecord HashingDictionary [max-hash dfs num-docs num-pos num-nnz]
-  DictionaryProtocol
-  (index [this token] (token-hash max-hash token))
-  (doc2bow [this document]
-    (reduce (fn [bow id]
-              (update-in bow [id] (fnil inc 0)))
-            (sorted-map)
-            (map #(index this %) document)))
-  (add-document [this document]
-    (reduce #(update-in %1 [:dfs %2] (fnil inc 0))
-            (-> this
-                (update-in [:num-docs] (fnil inc 0))
-                (update-in [:num-pos] (fnil + 0) (count document))
-                (update-in [:num-nnz] (fnil + 0) (count (distinct document))))
-            (map (partial index this) (distinct document))))
-  (add-documents [this documents]    
-    (reduce add-document this documents)))
-
-(defn dictionary
-  ([] (Dictionary. {} {} 0 0 0))
-  ([documents]
-   (add-documents (dictionary) documents 2000000)))
-
-(defn hashing-dictionary
-  ([] (HashingDictionary. 200000 {} 0 0 0))
-  ([documents]
-   (add-documents (hashing-dictionary) documents)))
-
 (comment
 
-  
   (def document1 (clojure.string/split "A walk in the park" #" "))
   (def document2 (clojure.string/split "I'm all dressed up tonight" #" "))
   (def document3 (clojure.string/split "A walk tonight ?" #" "))
   (def document4 (clojure.string/split "to walk or not to walk" #" "))
-  
+
   (dictionary)
   (doc2bow (dictionary) document1)
   (add-document (dictionary) document1)
@@ -88,16 +48,4 @@
   
   (dictionary [document1 document2 document3])
 
-
-  (hashing-dictionary)
-  (doc2bow (hashing-dictionary) document4)
-  (add-document (hashing-dictionary) document4)
-  (add-document (add-document (hashing-dictionary) document1) document4)
-
-  (add-documents (hashing-dictionary) [document1 document3])
-  
-  (hashing-dictionary [document1 document2 document3 document4])  
-
   )
-
-

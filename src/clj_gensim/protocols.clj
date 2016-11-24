@@ -38,7 +38,6 @@
 
 ;;; Plain text
 
-
 (defprotocol TextProtocol
   (text [this] [this default])
   (language [this] [this default])
@@ -70,21 +69,6 @@
                         (throw (Exception. (str "unknown languages: " this ", " default))))))
   (tokens [this] (map :char-term (analyze (text-analyzer (language this)) (text this) #{:char-term}))))
 
-(comment
-
-  (language :english)
-  (language "en")
-  (language "english")
-
-  (language {:language "en"})
-  
-  (text "lkdf lksf klsd")
-  (text {:text "lkdf lksf klsd"})
-
-  (tokens {:text "lkdf lksf klsd" :language "en"} )
-
-  )
-
 
 ;;; Document, Corpus and Dictionary
 
@@ -111,15 +95,21 @@
   (satisfies? Document x))
 
 (defprotocol DocumentSource
-  (document [this x])
-  (dimension [this]))
+  (document [this x]))
 
 (defprotocol Corpus
   (num-tokens [this])
   (num-nonzero [this])
   (num-documents [this])
-  (document-sequence [this])
+  (add-document [this doc])
+  (document-at [this idx])
+  (documents [this])
   (document-matrix [this]))
+
+;;; TODO: remove document-matrix from Corpus protocol
+
+(defn add-documents [this documents]
+  (reduce add-document this documents))
 
 (defprotocol Transformation
   (transform* [this v])
@@ -143,6 +133,7 @@
 
 
 (comment
+  
   ;;; SaveLoad tests
 
   (save (m/matrix [[1 2] [3 4]]) "/tmp/testm")
@@ -154,6 +145,17 @@
   (save [(m/matrix [[1 2] [3 4]]) (m/new-sparse-array 10) ] "/tmp/testm")
   (load "/tmp/testm")
 
+  ;;; Text, language and tokens test 
+
+  (language :english)
+  (language "en")
+  (language "english") ;; throws exception
+  (language {:language "en"})
+  
+  (text "Het kruim van de Gentse techscene verzamelt vandaag voor de eerste van meerdere ‘Level Up Sessions’.")
+  (text {:text "Het kruim van de Gentse techscene verzamelt vandaag voor de eerste van meerdere ‘Level Up Sessions’."})
+
+  (tokens {:text "Het kruim van de Gentse techscene verzamelt vandaag voor de eerste van meerdere ‘Level Up Sessions’."
+           :language "nl"})
+
   )
-
-

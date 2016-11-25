@@ -8,7 +8,6 @@
   (num-documents [this] (first (m/shape m)))
   (num-nonzero [this] (m/non-zero-count m))
   (document-at [this idx] (m/sparse (m/slice m idx)))
-  (document-matrix [this] m)
   (documents [this]
     (map m/sparse (m/slices m)))
   (add-document [this doc]

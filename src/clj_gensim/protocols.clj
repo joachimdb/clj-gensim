@@ -11,6 +11,14 @@
   (save* [this destination opts] "opts include :append and :endocing")
   (load* [this source opts]))
 
+(defn save-object [x destination opts]
+  (with-open [os (ObjectOutputStream. (io/make-output-stream destination opts))]
+    (.writeObject os x)))
+
+(defn load-object [source opts]
+  (with-open [is (ObjectInputStream. (io/make-input-stream source opts))]
+     (.readObject is)))
+
 (defn save
   ([object destination] (save object destination {}))
   ([object destination opts]
@@ -20,18 +28,16 @@
   ([source]
    (load source {}))
   ([source opts]
-   (with-open [is (ObjectInputStream. (io/make-input-stream source opts))]
-     (.readObject is)))
+   (load-object source opts))
   ([object source opts]
    (load* object source opts)))
 
 (extend-protocol SaveLoad
   java.io.Serializable
   (save* [this destination opts]
-    (with-open [os (ObjectOutputStream. (io/make-output-stream destination opts))]
-      (.writeObject os this)))
+    (save-object this destination opts))
   (load* [this source opts]
-    (let [loaded (load source opts)]
+    (let [loaded (load-object source opts)]
       (if (= (type loaded) (type this))
         loaded
         (throw (Exception. (str "Object loadef from \"" source "\" is of type " (type loaded) ", expected " (type this))))))))
@@ -103,10 +109,36 @@
   (num-documents [this])
   (add-document [this doc])
   (document-at [this idx])
-  (documents [this])
-  (document-matrix [this]))
+  (documents [this]))
 
-;;; TODO: remove document-matrix from Corpus protocol
+(extend-protocol Corpus
+  mikera.arrayz.impl.AbstractArray
+  (num-tokens [this] (m/non-zero-count this))
+  (num-nonzero [this] (m/non-zero-count this))
+  (num-documents [this] 1)
+  (document-at [this idx]
+    (if (zero? idx)
+      this
+      (throw (Exception. (str "index " idx ">0")))))
+  (documents [this] (sequence [this]))
+  mikera.vectorz.AVector
+  (num-tokens [this] (m/non-zero-count this))
+  (num-nonzero [this] (m/non-zero-count this))
+  (num-documents [this] 1)
+  (document-at [this idx]
+    (if (zero? idx)
+      this
+      (throw (Exception. (str "index " idx ">0")))))
+  (documents [this] (sequence [this]))
+  mikera.arrayz.INDArray
+  (num-tokens [this] (m/non-zero-count this))
+  (num-nonzero [this] (m/non-zero-count this))
+  (num-documents [this] 1)
+  (document-at [this idx]
+    (if (zero? idx)
+      this
+      (throw (Exception. (str "index " idx ">0")))))
+  (documents [this] (sequence [this])))
 
 (defn add-documents [this documents]
   (reduce add-document this documents))

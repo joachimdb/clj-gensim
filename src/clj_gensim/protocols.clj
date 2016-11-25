@@ -1,5 +1,5 @@
 (ns clj-gensim.protocols
-  (:refer-clojure :exclude [load])
+  (:refer-clojure :exclude [load vec])
   (require [clojure.core.matrix :as m]
            [clojure.java.io :as io]
            [clj-gensim.analysis.lucene :refer :all])
@@ -49,7 +49,12 @@
   (language [this] [this default])
   (tokens [this]))
 
+
 (extend-protocol TextProtocol
+  clojure.lang.Keyword
+  (language
+    ([this] (or (KnownLanguages this) (throw (Exception. (str "unknown language: " this)))))
+    ([this default] (or (KnownLanguages this) (KnownLanguages default) (throw (Exception. (str "unknown language: " default))))))
   java.lang.String
   (text
     ([this] this)
@@ -57,12 +62,7 @@
   (language
     ([this] (or (KnownLanguages this) (throw (Exception. (str "unknown language: " this)))))
     ([this default] (or (KnownLanguages this) (KnownLanguages default) (throw (Exception. (str "unknown language: " default))))))
-  java.lang.Object
-  (language
-    ([this] (or (KnownLanguages this) (throw (Exception. (str "unknown language: " this)))))
-    ([this default] (or (KnownLanguages this) (KnownLanguages default) (throw (Exception. (str "unknown language: " default))))))
-  (tokens [this] (map :char-term (analyze (text-analyzer (language this)) (text this) #{:char-term})))
-  clojure.lang.Associative
+  clojure.lang.IPersistentMap
   (text
     ([this] (or (text (:text this)) (throw (Exception. (str "unknown text: " this)))))
     ([this default] (or (text (:text this))
@@ -74,7 +74,6 @@
                         (language (:default this))()
                         (throw (Exception. (str "unknown languages: " this ", " default))))))
   (tokens [this] (map :char-term (analyze (text-analyzer (language this)) (text this) #{:char-term}))))
-
 
 ;;; Document, Corpus and Dictionary
 
@@ -90,12 +89,25 @@
 (defn add-texts [dictionary texts]    
   (reduce add-text dictionary texts))
 
-(defprotocol Document)
+(defprotocol Document
+  ;; (vec [this])
+  ;; (num-nonzero [this])
+  )
 
 (extend-protocol Document
   mikera.arrayz.impl.AbstractArray
-  mikera.vectorz.AVector
-  mikera.arrayz.INDArray)
+  ;; (vec [this] this)
+  ;; (num-nonzero [this] (m/non-zero-count this))
+  )
+
+(defn document-from-token-counts
+  ([token-counts]
+   (document-from-token-counts (inc (reduce max (map first token-counts))) token-counts))
+  ([max-token-index token-counts]
+   (let [v (m/new-sparse-array max-token-index)]
+     (doseq [[idx cnt] token-counts]
+       (m/mset! v idx (double cnt)))
+     v)))
 
 (defn document? [x]
   (satisfies? Document x))
@@ -104,41 +116,10 @@
   (document [this x]))
 
 (defprotocol Corpus
-  (num-tokens [this])
-  (num-nonzero [this])
   (num-documents [this])
   (add-document [this doc])
   (document-at [this idx])
   (documents [this]))
-
-(extend-protocol Corpus
-  mikera.arrayz.impl.AbstractArray
-  (num-tokens [this] (m/non-zero-count this))
-  (num-nonzero [this] (m/non-zero-count this))
-  (num-documents [this] 1)
-  (document-at [this idx]
-    (if (zero? idx)
-      this
-      (throw (Exception. (str "index " idx ">0")))))
-  (documents [this] (sequence [this]))
-  mikera.vectorz.AVector
-  (num-tokens [this] (m/non-zero-count this))
-  (num-nonzero [this] (m/non-zero-count this))
-  (num-documents [this] 1)
-  (document-at [this idx]
-    (if (zero? idx)
-      this
-      (throw (Exception. (str "index " idx ">0")))))
-  (documents [this] (sequence [this]))
-  mikera.arrayz.INDArray
-  (num-tokens [this] (m/non-zero-count this))
-  (num-nonzero [this] (m/non-zero-count this))
-  (num-documents [this] 1)
-  (document-at [this idx]
-    (if (zero? idx)
-      this
-      (throw (Exception. (str "index " idx ">0")))))
-  (documents [this] (sequence [this])))
 
 (defn add-documents [this documents]
   (reduce add-document this documents))
@@ -153,6 +134,8 @@
                    (cons (transform t (first x))
                          (lazy-seq (transform t (rest x)))))
         (m/vec? x) (transform* t x)
+        (satisfies? Document x) (transform* t x)
+        (satisfies? Corpus x) (transform t (documents x))
         :else (throw (Exception. (str "Don't know how to transform " (type x)))))  )
 
 (defn transform! [t x]
@@ -161,8 +144,16 @@
                    (cons (transform! t (first x))
                          (lazy-seq (transform! t (rest x)))))
         (m/vec? x) (transform*! t x)
+        (satisfies? Document x) (transform*! t x)
+        (satisfies? Corpus x) (transform! t (documents x))
         :else (throw (Exception. (str "Don't know how to transform " (type x)))))  )
 
+(defprotocol Model
+  (train* [this corpus]))
+
+(defmulti train (fn [model x] (class x)))
+(defmethod train Corpus [model x]
+  (train* model x))
 
 (comment
   

@@ -37,7 +37,7 @@
         (throw (Exception. (str "Attempt to load shard at location '" (location shard) "' from shard at location'" (location l) "'"))))
       (throw (Exception. (str "Attempt to load object of type " (type l) " into object of type ShardP"))))))
 
-(defrecord MatrixCorpusShard [mc offset num-doc loc num-nnz changed?]
+(defrecord MatrixCorpusShard [mc offset num-doc loc changed?]
   SaveLoad
   (save* [this destination opts]
     (if (save-shard this (io/as-file destination) opts)
@@ -47,7 +47,6 @@
          (assoc (load-shard this loc opts) :changed? false))
   Corpus
   (num-documents [this] num-doc)
-  (num-nonzero [this] num-nnz)
   (document-at [this idx]
     (if (nil? mc)
       (throw (Exception. "Attempt to access a document from closed shard"))
@@ -66,7 +65,6 @@
       (-> this
           (update-in [:mc] add-document doc)
           (update-in [:num-doc] inc)
-          (update-in [:num-nnz] + (num-nonzero doc))
           (assoc :changed? true))))
   ShardP
   (open? [this] (not (nil? mc)))
@@ -93,7 +91,7 @@
   (when (.exists (io/as-file location))
     (throw (Exception. (str "Attempt to create matrix-corpus-shard at existing location '" location "'"))))
   (let [mc (matrix-corpus docs)
-        ret (MatrixCorpusShard. mc offset (num-documents mc) (io/as-file location) (num-nonzero mc) true)]
+        ret (MatrixCorpusShard. mc offset (num-documents mc) (io/as-file location) true)]
       (or (save ret location)
           (throw (Exception. (str "Failed to create matrix-corpus-shard at location '" location "'"))))))
 
@@ -119,7 +117,6 @@
 (defrecord ShardedCorpus [max-shard-size shards loc]
   Corpus
   (num-documents [this] (reduce + 0 (map num-documents @shards)))
-  (num-nonzero [this] (reduce + 0 (map num-nonzero @shards)))
   (document-at [this idx]
     (swap! shards #(open-shard-at % idx))
     (document-at (shard-at @shards idx) idx))

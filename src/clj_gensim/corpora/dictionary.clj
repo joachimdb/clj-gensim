@@ -6,8 +6,6 @@
 (defrecord Dictionary [token2id dfs num-docs num-pos num-nnz]
   Corpus
   (num-documents [this] num-docs)
-  (num-tokens [this] num-pos)
-  (num-nonzero [this] num-nnz)
   DictionaryProtocol
   (token-index [this token] (token2id token))
   (max-token-index [this] (count token2id))
@@ -29,15 +27,16 @@
   DocumentSource
   (document [this x]
     (assert (satisfies? TextProtocol x))
-    (let [v (m/new-sparse-array (max-token-index this))]
-      (doseq [[idx s] (frequencies (remove nil? (map #(token-index this %) (tokens x))))]
-        (m/mset! v idx (double s)))
-      v)))
+    (document-from-token-counts (max-token-index this) (frequencies (remove nil? (map #(token-index this %) (tokens x)))))))
 
 (defn dictionary
-  ([] (Dictionary. {} (m/new-array [0]) 0 0 0))
-  ([texts]
-   (add-texts (dictionary) texts)))
+  ([] (dictionary nil {}))
+  ([texts] (dictionary texts {}))
+  ([texts {}]
+   (let [dict (Dictionary. {} (m/new-array [0]) 0 0 0)]
+     (if (empty? texts)
+       dict
+       (add-texts dict texts)))))
 
 (comment
 
@@ -49,7 +48,6 @@
   (tokens document4)
   (add-text (dictionary) document4)
   (max-token-index (add-text (dictionary) document4))
-  (num-tokens (add-text (dictionary) document4))
 
   (tokens document1)
   (def d (add-text (dictionary) document1))

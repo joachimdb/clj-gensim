@@ -174,20 +174,40 @@
                  [document1 document2 document3 document4]))
 
   (def loc "/tmp/test-corpus/")
-  (def c (sharded-corpus 2 loc []))
-  (add-document c (first docs))
-  (add-document c (second docs))
-  (add-document c (nth docs 2))
-  (add-documents c docs)
+  (def c (sharded-corpus 20000 loc []))
+  (time (def c (add-documents c (take 100000 (cycle docs)))))
+  "Elapsed time: 65635.294536 msecs"
+  ;; takes 7.3M on disk (14880 blocks)
+  
+  (num-documents c)
+  (time (count (documents c)))
+  "Elapsed time: 87.639925 msecs"
+  ;; That's more than 1M documents per second!
+
+  (use 'clj-gensim.corpora.hash-dictionary)
+
+  (def dict (hash-dictionary 20000 [document1 document2 document3 document4]))
+  (def docs (map (partial document dict)
+                 [document1 document2 document3 document4]))
+
+  (def loc "/tmp/test-corpus-sparse/")
+  (def c (sharded-corpus 20000 loc []))
+  (time (def c (add-documents c (take 100000 (cycle docs)))))
+  "Elapsed time: 24233.033588 msecs"
+  ;; takes 0.5M on disk (1000 blocks)
+
+  ;; that's almost 3 times faster and only uses about 1/15th of space 
 
   (num-documents c)
-  (documents c)
-  (document-at c 0)
-  (document-at c 3)
+  (time (count (documents c)))
+  "Elapsed time: 14.759626 msecs"
+  ;; That's almost than 8M documents per second!
 
+
+
+  
   (save c "/tmp/test-corpus/")
   (def c (load (sharded-corpus) "/tmp/test-corpus/" {}))
-
 
   )
 

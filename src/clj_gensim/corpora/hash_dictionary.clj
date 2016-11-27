@@ -10,8 +10,6 @@
       r)))
 
 (defrecord HashDictionary [max-hash dfs num-docs num-pos num-nnz]
-  Corpus
-  (num-documents [this] num-docs)
   DictionaryProtocol
   (token-index [this token] (token-hash max-hash token))
   (max-token-index [this] max-hash)
@@ -22,11 +20,7 @@
     (-> this
         (update-in [:num-docs] (fnil inc 0))
         (update-in [:num-pos] (fnil + 0) (count tokens))
-        (update-in [:num-nnz] (fnil + 0) (count (distinct tokens)))))
-  DocumentSource
-  (document [this x]
-    (assert (satisfies? TextProtocol x))
-    (document-from-token-counts (max-token-index this) (frequencies (remove nil? (map #(token-index this %) (tokens x)))))))
+        (update-in [:num-nnz] (fnil + 0) (count (distinct tokens))))))
 
 (defn dictionary
   ([] (dictionary nil {:max-token-index 20000}))
@@ -37,27 +31,29 @@
        dict
      (add-texts dict texts)))))
 
+
 (comment
 
-  (def document1 {:text "A walk in the park" :language :english})
-  (def document2 {:text "I'm all dressed up tonight" :language "en"})
-  (def document3 {:text "A walk tonight ?" :language "en"})
-  (def document4 {:text "to walk or not to walk" :language "en"})
+  (def texts [{:text "A walk in the park" :language :english}
+              {:text "I'm all dressed up tonight" :language "en"}
+              {:text "A walk tonight ?" :language "en"}
+              {:text "to walk or not to walk" :language "en"}])
 
-  (tokens document4)
-  (add-text (hash-dictionary 20) document4)
-  (max-token-index (add-text (hash-dictionary 20) document4))
+  (tokens (last texts))
+  (add-text (dictionary) (last texts))
+  (max-token-index (add-text (dictionary) (last texts)))
 
-  (tokens document1)
-  (def d (add-text (dictionary 20) document1))
+  (tokens (first texts))
+  (def d (add-text (dictionary) (first texts)))
   (max-token-index d)
-  (document d document1)
-  (document (add-text d document1) document1)
-  (document (dictionary 20 [document1 document2 document3 document4]) document1)
-  (document (dictionary 20 [document1 document2 document3 document4]) document4)
+  (document d (first texts))
+  (document (add-text d (first texts)) (first texts))
+  (document (dictionary texts) (first texts))
+  (document (dictionary texts) (last texts))
   
-  (document-frequencies (hash-dictionary 20 [document1 document2 document3]))
+  (document-frequencies (dictionary texts))
   
   )
+
 
 

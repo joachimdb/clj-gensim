@@ -1,10 +1,10 @@
 # clj-gensim
 
-A Clojure clone of python's gensym
+A [gensim](https://radimrehurek.com/gensim/) inspired clojure library
 
 ## Usage
 
-FIXME
+Look at the wiki [tutorial](https://github.com/joachimdb/clj-gensim/wiki/Tutorial)
 
 ## License
 

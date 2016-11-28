@@ -15,10 +15,16 @@
   (train-document [this doc] this)
   (train-batch [this b] this))
 
+(defn construct-norm-model
+  ([] (construct-norm-model "l2"))
+  ([norm-type]
+   (NormModel. norm-type)))
+
 (defn norm-model
   ([] (norm-model "l2"))
   ([norm-type]
-   (NormModel. norm-type)))
+   (let [m (construct-norm-model norm-type)]
+     (fn [c] (transform m c)))))
 
 
 (comment

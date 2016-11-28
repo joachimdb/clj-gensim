@@ -244,15 +244,14 @@
 ;;; ============
 
 (defprotocol SimilarityProtocol
-  (sim-document [this doc])
-  (sim-batch [this batch]))
+  (sim-document [this doc]))
 
 (defn sim [s x]
   (assert (satisfies? SimilarityProtocol s))
   (cond (document? x) (sim-document s x)
-        (batch? x) (try (sim-batch s x)
-                        (catch Exception e (sim s (documents x))))
-        (corpus? x) (reduce sim-document s (documents x))
+        ;; (batch? x) (try (sim-batch s x)
+        ;;                 (catch Exception e (sim s (documents x))))
+        ;; (corpus? x) (reduce sim-document s (documents x))
         :else (throw (Exception. (str "Don't know how to compute similarity to object of type " (type x))))))
 
 

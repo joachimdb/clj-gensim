@@ -29,9 +29,12 @@
       (assoc this :idfs (compute-idfs-from-corpus (documents b) add))
       (throw (Exception. "not implemented")))))
 
-(defn tfidf-model
-  ([] (tfidf-model nil {}))
-  ([x] (tfidf-model x {}))
+
+;; (supers (type tfidf-model))
+;; (type cons)
+(defn construct-tfidf-model
+  ([] (construct-tfidf-model nil {}))
+  ([x] (construct-tfidf-model x {}))
   ([x {:keys [add] :or {add 0.0} :as opts}]
    (cond (nil? x)
          (TfIdfModel. nil add)
@@ -40,6 +43,13 @@
          (corpus? x)
          (train-batch (TfIdfModel. nil add) x)
          :else (throw (Exception. (str "Don't know how to create TfIdfModel from " (type x)))))))
+
+(defn tfidf-model
+  ([] (tfidf-model nil {}))
+  ([x] (tfidf-model x {}))
+  ([x {:keys [add] :or {add 0.0} :as opts}]
+   (let [m (construct-tfidf-model x opts)]
+     (fn [c] (transform m c)))))
 
 (comment
 

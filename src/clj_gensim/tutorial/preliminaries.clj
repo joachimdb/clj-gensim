@@ -1,10 +1,9 @@
 (ns clj-gensim.tutorial.preliminaries  
   (:refer-clojure :exclude [load])
-  (:require [clojure.core.matrix :as m]           
-            [clojure.java.io :as io]
-            [clj-gensim.protocols :refer :all]
+  (:require [clj-gensim.protocols :refer :all]
             [clj-gensim.models.tfidf-model :refer (tfidf-model)]
-            ))
+            [clj-gensim.models.norm-model :refer (norm-model)]
+            [clj-gensim.similarities.cosine-similarity :refer (cosine-similarity)]))
 ;; (remove-ns 'clj-gensim.tutorial.preliminaries)
 
 ;; Tutorial code following the preliminaries at https://radimrehurek.com/gensim/tutorial.html#id1
@@ -28,19 +27,17 @@
 ;; Transforming a document or a corpus
 
 (def doc (document c [[0 1] [4 1]]))
-(transform tfidf doc)
+(tfidf doc)
+(tfidf c)
 
-(transform tfidf c)
+(def normalize (norm-model))
+(normalize doc)
+(normalize (tfidf doc))
+(normalize (tfidf c))
 
 ;; Computing similarities
 
+(def csim (cosine-similarity (normalize (tfidf c))))
+(csim (normalize doc))
+(csim (normalize (first (documents c))))
 
-(cosine-similarity (transform tfidf c) doc)
-
-;; => similarity takes a doc/batch/corpus and a doc and returns the similarities of the doc to ...
-
-;; we'd like to be ablt to write
-
-(def sim (cosine-similarity (norm-model (tfidf-model c))))
-
-;; => models can themselves be corpusses as well?
